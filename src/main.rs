@@ -1,86 +1,11 @@
-use std::fs::OpenOptions;
-use std::io::{self, Read, Write};
 use std::path::PathBuf;
 
-use chrono::{DateTime, Local};
+use chrono::Local;
 use chrono_english::{Dialect, parse_date_string};
 
 mod cli;
 mod config;
-
-pub struct Task {
-    pub title: String,
-    pub is_complete: bool,
-    pub scheduled: Option<DateTime<Local>>,
-    pub location: Option<String>,
-}
-
-impl Task {
-    pub fn new(title: String) -> Self {
-        Self {
-            title,
-            is_complete: false,
-            scheduled: None,
-            location: None,
-        }
-    }
-
-    pub fn scheduled(mut self, date: Option<DateTime<Local>>) -> Self {
-        self.scheduled = date;
-        self
-    }
-
-    pub fn location(mut self, loc: Option<String>) -> Self {
-        self.location = loc;
-        self
-    }
-
-    pub fn to_md_line(&self) -> String {
-        let check_mark = if self.is_complete { "x" } else { " " };
-        match &self.scheduled {
-            Some(dt) => format!(
-                "- [{}] {} (Scheduled: {})\n",
-                check_mark,
-                self.title,
-                dt.format("%Y-%m-%d")
-            ),
-            None => format!("- [{}] {}\n", check_mark, self.title,),
-        }
-    }
-}
-
-pub struct ParsedTask {
-    pub title: String,
-    pub scheduled: Option<DateTime<Local>>,
-    pub location: Option<String>,
-}
-
-fn load_tasks(file_path: &PathBuf) -> io::Result<String> {
-    let mut file = OpenOptions::new().read(true).write(true).open(file_path)?;
-
-    let mut content = String::new();
-    file.read_to_string(&mut content)?;
-
-    Ok(content)
-}
-
-fn add_task(
-    file_path: &PathBuf,
-    task_title: String,
-    task_schedule: Option<DateTime<Local>>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let new_task = Task::new(task_title).scheduled(task_schedule);
-
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(file_path)?;
-
-    file.write_all(new_task.to_md_line().as_bytes())?;
-
-    println!("Task added successfully!");
-    Ok(())
-}
+mod task;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cfg: config::Config = confy::load("taiginator", None)?;
@@ -108,7 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             println!("Adding {}", title);
-            add_task(&task_path, title.to_string(), parsed_time);
+            task::add_task(&task_path, title.to_string(), parsed_time)?;
         }
         Some(("list", sub_matches)) => {
             /* filtering by state
@@ -117,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             sub_matches.get_one::<String>("STATE").expect("required")
                         );
             */
-            let tasks = load_tasks(&task_path)?;
+            let tasks = task::load_tasks(&task_path)?;
             println!("{}", tasks);
         }
         Some(("remove", sub_matches)) => {
