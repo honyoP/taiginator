@@ -56,9 +56,19 @@ pub fn cli() -> Command {
             ),
         )
         .subcommand(
+            Command::new("check").about("Checks task completed.").arg(
+                Arg::new("ID")
+                    .help("Task ID to be checked complete.")
+                    .action(ArgAction::Set)
+                    .num_args(1)
+                    .required(true)
+                    .value_parser(clap::value_parser!(u32)),
+            ),
+        )
+        .subcommand(
             Command::new("remove").about("Removes a task").arg(
-                Arg::new("TASK")
-                    .help("Removes a task")
+                Arg::new("ID")
+                    .help("Task ID to be removed")
                     .action(ArgAction::Set)
                     .num_args(1..),
             ),
