@@ -1,4 +1,7 @@
-# 🌲 Taiga
+![taiga_banner](https://github.com/user-attachments/assets/5ff181bd-05c2-454a-a2d0-1c3e91eeb19c)
+
+
+# Taiga
 
 > **CodeName: YATTA (Yet Another Terminal Task App)**
 
