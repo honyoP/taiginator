@@ -6,16 +6,26 @@ use chrono_english::{Dialect, parse_date_string};
 use crate::task::TaskRepository;
 
 mod cli;
+mod client;
 mod config;
+mod daemon;
+mod ipc;
 mod task;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let matches = cli::cli().get_matches();
+
+    if matches.subcommand_matches("daemon").is_some() {
+        daemon::run_daemon().await?;
+        return Ok(());
+    }
+
     let cfg: config::Config = confy::load("taiga", None)?;
     let mut tasks_file_path = PathBuf::from(&cfg.data_directory);
     tasks_file_path.push(&cfg.task_filename);
     let mut repo = TaskRepository::load_from_file(&tasks_file_path)?;
 
-    let matches = cli::cli().get_matches();
     match matches.subcommand() {
         Some(("add", sub_matches)) => {
             let title = sub_matches.get_one::<String>("TITLE").expect("required");
@@ -95,6 +105,53 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 None => {
                     println!("Error: Task with ID {} not found.", id);
+                }
+            }
+        }
+
+        Some(("pomo", sub_matches)) => {
+            match sub_matches.subcommand() {
+                Some(("start", start_matches)) => {
+                    //start pomo
+                    let focus_input: u64 =
+                        start_matches.get_one::<String>("FOCUS").unwrap().parse()?;
+                    let break_input: u64 =
+                        start_matches.get_one::<String>("BREAK").unwrap().parse()?;
+                    let cycles_input: u32 =
+                        start_matches.get_one::<String>("CYCLES").unwrap().parse()?;
+                    // IPC Call
+                    let resp = client::send_command(ipc::DaemonCommand::Start {
+                        task_id: 0, // Pass real ID if you have it
+                        focus_len: focus_input,
+                        break_len: break_input,
+                        cycles: cycles_input,
+                    })
+                    .await?;
+                    println!("{:?}", resp);
+                }
+                // TODO: Prettify all Pomo outputs
+                Some(("status", status_matches)) => {
+                    let resp = client::send_command(ipc::DaemonCommand::Status).await?;
+                    println!("{:?}", resp);
+                }
+                Some(("stop", stop_matches)) => {
+                    client::send_command(ipc::DaemonCommand::Stop).await?;
+                    println!("Timer stopped.");
+                }
+                Some(("pause", pause_matches)) => {
+                    let resp = client::send_command(ipc::DaemonCommand::Pause).await?;
+                    println!("{:?}", resp);
+                }
+                Some(("resume", resume_matches)) => {
+                    let resp = client::send_command(ipc::DaemonCommand::Resume).await?;
+                    println!("{:?}", resp);
+                }
+                Some(("kill", kill_matches)) => {
+                    let resp = client::send_command(ipc::DaemonCommand::Kill).await?;
+                    println!("{:?}", resp);
+                }
+                _ => {
+                    println!("No command issued!");
                 }
             }
         }

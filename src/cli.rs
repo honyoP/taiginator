@@ -1,11 +1,9 @@
 use clap::{Arg, ArgAction, Command, Parser, Subcommand};
 
-/// Search for a pattern in a file and display the lines that contain it.
 #[derive(Parser)]
 #[command(version = "0.1")]
 #[command(about = "A taigination of task manager.")]
 pub struct Args {
-    /// Add, List, Remove, Tick Complete
     #[command(subcommand)]
     action: Commands,
 }
@@ -21,7 +19,16 @@ pub enum Commands {
 
 pub fn cli() -> Command {
     Command::new("taiga")
-        .about("A task organizer from a mentally deficit monkey")
+        .about(concat!(
+            ">>=====================================<<
+|| /__  ___/                           ||
+||   / /   ___     ( )  ___      ___   ||
+||  / /  //   ) ) / / //   ) ) //   ) )||
+|| / /  //   / / / / ((___/ / //   / / ||
+||/ /  ((___( ( / /   //__   ((___( (  ||
+>>=====================================<<\n",
+            "~A task organizer from a mentally deficit monkey~"
+        ))
         .version(env!("CARGO_PKG_VERSION"))
         .long_version(concat!(
             "v",
@@ -82,4 +89,41 @@ pub fn cli() -> Command {
                     .value_parser(clap::value_parser!(u32)),
             ),
         )
+        .subcommand(
+            Command::new("pomo")
+                .about("Pomodoro manager.")
+                .subcommand_precedence_over_arg(true)
+                .arg_required_else_help(true)
+                .subcommand(
+                    Command::new("start")
+                        .about("Starts new pomodoro session.")
+                        .arg(
+                            Arg::new("FOCUS")
+                                .help("How long should focus session last.")
+                                .action(ArgAction::Set)
+                                .num_args(1)
+                                .required(true),
+                        )
+                        .arg(
+                            Arg::new("BREAK")
+                                .help("How long should break session last.")
+                                .action(ArgAction::Set)
+                                .num_args(1)
+                                .required(true),
+                        )
+                        .arg(
+                            Arg::new("CYCLES")
+                                .help("How many cycles of focus times to repeat.")
+                                .action(ArgAction::Set)
+                                .num_args(1)
+                                .required(true),
+                        ),
+                )
+                .subcommand(Command::new("status").about("Shows status of running session."))
+                .subcommand(Command::new("stop").about("Stops running pomodoro session."))
+                .subcommand(Command::new("pause").about("Pauses running pomodoro session."))
+                .subcommand(Command::new("resume").about("Resumes paused pomodoro session."))
+                .subcommand(Command::new("kill").about("Kills daemon.")),
+        )
+        .subcommand(Command::new("daemon").hide(true))
 }

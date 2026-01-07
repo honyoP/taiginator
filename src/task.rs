@@ -52,21 +52,16 @@ impl Task {
         // (.*?)              -> Capture the Title lazy (Group 3)
         // (?:\s\(Scheduled:\s(.*)\))?$ -> Optional Non-capturing group for schedule. Capture date (Group 4)
 
-        // Note: Compile regex once statically for performance (using lazy_static or once_cell is better, but this is fine for CLI)
         let re = Regex::new(r"^\[ID:(\d+)\] - \[(.)\] (.*?)(?: \(Scheduled: (.*)\))?$").unwrap();
 
         let caps = re.captures(line)?;
 
-        // 1. Parse ID
         let id = caps.get(1)?.as_str().parse::<u32>().ok()?;
 
-        // 2. Parse Complete Status
         let is_complete = caps.get(2)?.as_str() == "x";
 
-        // 3. Parse Title
         let title = caps.get(3)?.as_str().to_string();
 
-        // 4. Parse Schedule (Optional)
         let scheduled = match caps.get(4) {
             Some(m) => {
                 let date_str = m.as_str();
@@ -169,7 +164,6 @@ impl TaskRepository {
             .truncate(true) // Overwrite file
             .open(path)?;
 
-        // Sort tasks by ID for clean output
         for task in self.list_all() {
             writeln!(file, "{}", task.to_md_line())?;
         }
